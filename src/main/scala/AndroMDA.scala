@@ -9,7 +9,7 @@ import sbt.classpath.ClasspathUtilities
  * @author stephane.manciot@ebiznext.com
  *
  */
-class AndroMDA(val classpath : Seq[File], val lastModifiedCheck : Boolean, val configurationFile : File){
+class AndroMDA(val classpath : Seq[File], val configurationFile : File){
 
   lazy val configurationContents = IO.read(configurationFile)
 

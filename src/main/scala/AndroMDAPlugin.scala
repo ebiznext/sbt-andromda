@@ -9,6 +9,8 @@ import Keys._
  */
 object AndroMDAPlugin extends Plugin {
 
+  private lazy val androMDAClean = taskKey[Seq[File]]("Clean AndroMDA generated sources")
+
   trait Keys {
 
     lazy val Config = config("andromda") extend(Compile) hide
@@ -18,6 +20,7 @@ object AndroMDAPlugin extends Plugin {
     lazy val androMDAConfiguration = settingKey[File]("AndroMDA configuration file")
     lazy val androMDAProperties = settingKey[Seq[(String, String)]]("Properties to be replaced within AndroMDA configuration file")
     lazy val androMDAGenerate = taskKey[Seq[File]]("Generate AndroMDA sources")
+    lazy val androMDAGeneratedSources = taskKey[Seq[File]]("Retrieve AndroMDA generated sources")
 
   }  
 
@@ -32,27 +35,43 @@ object AndroMDAPlugin extends Plugin {
   }
 
   object androMDA extends Keys {
-  	lazy val settings = Seq(ivyConfigurations += Config) ++ AndroMDADefaults.settings ++ Seq(
-  		// unmanagedResourceDirectories in Compile += androMDAConfiguration.value.getParentFile,
+    lazy val settings = Seq(ivyConfigurations += Config) ++ AndroMDADefaults.settings ++ Seq(
+      // unmanagedResourceDirectories in Compile += androMDAConfiguration.value.getParentFile,
       androMDAProperties += "lastModifiedCheck" -> ("" + lastModifiedCheck.value),
-  		androMDAGenerate := {
-  			val s: TaskStreams = streams.value
-	      val classpath : Seq[File] = update.value.select( configurationFilter(name = Config.name) )
-	      val props = Map.empty[String, String] ++ androMDAProperties.value
-  			Filter(s.log, androMDAConfiguration.value, (classDirectory in Compile).value, props)
-  			val configurationFile : File = (classDirectory in Compile).value / androMDAConfiguration.value.name
-  			new AndroMDA(classpath, lastModifiedCheck.value, configurationFile).generate()
+      androMDAGenerate := {
+        val s: TaskStreams = streams.value
+        val classpath : Seq[File] = update.value.select( configurationFilter(name = Config.name) )
+        val props = Map.empty[String, String] ++ androMDAProperties.value
+        Filter(s.log, androMDAConfiguration.value, (classDirectory in Compile).value, props)
+        val configurationFile : File = (classDirectory in Compile).value / androMDAConfiguration.value.name
+        if(configurationFile.exists()) {new AndroMDA(classpath, configurationFile).generate()}
         Nil
-  		}//,
-      //sourceGenerators in Compile <+= androMDAGenerate
-  	)
+      },
+      androMDAGeneratedSources in Compile := {
+        retrieveGeneratedFiles(streams.value, baseDirectory.value)
+      },
+      sourceGenerators in Compile <+= androMDAGeneratedSources in Compile,
+      androMDAClean := {
+        val files : Seq[File] = (baseDirectory.value / ".." ** "andromda*.log").get ++ retrieveGeneratedFiles(streams.value, baseDirectory.value)
+        IO.delete(files)
+        files
+      },
+      clean <<= (clean) dependsOn (androMDAClean)
+    )
 
     def retrieveGeneratedFiles(s: TaskStreams, baseDirectory : File) : Seq[File] = {
+      val f : File = baseDirectory / ".." / "andromda.log"
+      if(f.exists()){
         val token : String = "Output:"
-        val files : Seq[File] = IO.readLines(baseDirectory / ".." / "andromda.log") filter {_ contains token} map { l =>
+        val files : Seq[File] = IO.readLines(f) filter {_ contains token} map { l =>
           file(l.substring(l.indexOf("file:/", l.indexOf(token)) + 5, l.length - 1).trim)
         } filter {f => f.getAbsolutePath.startsWith(baseDirectory.getAbsolutePath)} filter {f => (f.name endsWith (".java")) || (f.name endsWith (".scala")) || (f.name endsWith (".groovy"))}
         files
+      }
+      else{
+        s.log.warn(f.getAbsolutePath() + " does not exist")
+        Nil
+      }
     }
   }
 
