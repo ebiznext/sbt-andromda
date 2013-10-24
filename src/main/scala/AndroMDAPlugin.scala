@@ -38,9 +38,12 @@ object AndroMDAPlugin extends Plugin {
     lazy val settings = Seq(ivyConfigurations += Config) ++ AndroMDADefaults.settings ++ Seq(
       // unmanagedResourceDirectories in Compile += androMDAConfiguration.value.getParentFile,
       androMDAProperties += "lastModifiedCheck" -> ("" + lastModifiedCheck.value),
+      managedClasspath in androMDAGenerate <<= (classpathTypes in androMDAGenerate, update) map { (ct, report) =>
+          Classpaths.managedJars(Config, ct, report)
+      },
       androMDAGenerate := {
         val s: TaskStreams = streams.value
-        val classpath : Seq[File] = update.value.select( configurationFilter(name = Config.name) )
+        val classpath : Seq[File] = ((managedClasspath in androMDAGenerate).value).files
         val props = Map.empty[String, String] ++ androMDAProperties.value
         Filter(s.log, androMDAConfiguration.value, (classDirectory in Compile).value, props)
         val configurationFile : File = (classDirectory in Compile).value / androMDAConfiguration.value.name

@@ -1,12 +1,11 @@
-sbtPlugin := true
+name := "mappings"
 
-name := "sbt-andromda"
+organization := "com.ebiznext.sbt.plugins.andromda"
 
-organization := "com.ebiznext.sbt.plugins"
+version := "3.2"
 
-version := "0.1.2"
-
-scalaVersion := "2.10.2"
+// disable using the Scala version in output paths and artifacts
+crossPaths := false
 
 publishMavenStyle := true
 

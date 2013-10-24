@@ -22,8 +22,8 @@ object AndroMDADependencies {
 
     "org.andromda.profiles.uml2" % "andromda-profile" % androMDAVersion % Config.name,
 
-    // andromda maven plugin -> to add default mappings within classpath
-    "org.andromda.maven.plugins" % "andromda-maven-plugin" % androMDAVersion % Config.name,
+    // to add default mappings within classpath
+    "com.ebiznext.sbt.plugins.andromda" % "mappings" % androMDAVersion % Config.name,
 
     // androMDA cartridges
     ("org.andromda.cartridges" % "andromda-meta-cartridge" % androMDAVersion % Config.name) jar,
